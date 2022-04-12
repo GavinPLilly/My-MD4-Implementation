@@ -85,8 +85,8 @@ void MD4Update(MD4_t *context, unsigned char *input, uint32_t input_len) {
 			input_index += 64;
 			input_len -= 64;
 		}
+		memcpy(context->buffer, &input[input_index], input_len);
 	}
-	memcpy(context->buffer, &input[input_index], input_len);
 }
 
 /* Ends message accumulation and adds padding and message length
