@@ -50,38 +50,46 @@ void MD4Init(MD4_t *context) {
 	context->count[1] = 0;
 }
 
-// Process 16 word blocks (128 bits)
+/**
+ * MD4 block update operation. Continues an MD4
+ * params:
+ * 	context: the MD4_t struct to be updated
+ * 	input: the input to be processed
+ * 	input_len: byte length of the input
+ */
+// MD4_T->buffer is 64 bytes
 void MD4Update(MD4_t *context, unsigned char *input, uint32_t input_len) {
-	uint32_t i; // Loop counter
-	uint32_t index; // number of bytes mod 64
-	uint32_t part_len; //
+	uint32_t buf_fill;
+	uint32_t input_index;
 
-	// Compute the number of bytes
-	index = (uint32_t)((context->count[0] >> 3) & 0x3F);
-	// Update number of bits
+	// Compute how full buffer is
+	buf_fill = (uint32_t)((context->count[0] >> 3) & 0x3F);
+
+	// Update bit count
 	context->count[0] += input_len << 3;
 	if(context->count[0] < input_len << 3) { // Check for overflow
 		context->count[1]++;
 	}
 	context->count[1] += ((uint32_t)input_len >> 29); // shift of 32 minus the 3 already done
-	part_len = 64 - index;
-	// Transform repeatedly
-	if(input_len >= part_len) {
-		memcpy(&context->buffer[index], input, part_len);
-		MD4Transform(context->state, context->buffer);
 
-		for(i = part_len; i + 63 < input_len; i += 64) {
-			MD4Transform(context->state, &input[i]);
-		}
-		index = 0;
+	// Try to fill buffer from input
+	input_index = 64 - buf_fill < input_len ? 64 - buf_fill : input_len;
+	memcpy(&context->buffer[buf_fill], input, input_index);
+	buf_fill += input_index;
+	input_len -= input_index;
+
+	while(buf_fill == 64) { // Only loop if ready to transform
+		MD4Transform(context->state, context->buffer);
+		buf_fill = 64 < input_len ? 64 : input_len;
+		input_len -= buf_fill;
+		memcpy(context->buffer, &input[input_index], buf_fill);
+		input_index += buf_fill;
 	}
-	else {
-		i = 0;
-	}
-	// Buffer remaining input
-	memcpy(&context->buffer[index], &input[i], input_len - i);
 }
 
+/* Ends message accumulation and adds padding and message length
+ * Then clears out the context
+ */
 void MD4Final(unsigned char digest[16], MD4_t *context) {
 	unsigned char bits[8];
 	unsigned int index, pad_len;
