@@ -78,13 +78,15 @@ void MD4Update(MD4_t *context, unsigned char *input, uint32_t input_len) {
 	buf_fill += input_index;
 	input_len -= input_index;
 
-	while(buf_fill == 64) { // Only loop if ready to transform
+	if(buf_fill == 64) {
 		MD4Transform(context->state, context->buffer);
-		buf_fill = 64 < input_len ? 64 : input_len;
-		input_len -= buf_fill;
-		memcpy(context->buffer, &input[input_index], buf_fill);
-		input_index += buf_fill;
+		while(input_len >= 64) { // Only loop if enough input to transform
+			MD4Transform(context->state, &input[input_index]);
+			input_index += 64;
+			input_len -= 64;
+		}
 	}
+	memcpy(context->buffer, &input[input_index], input_len);
 }
 
 /* Ends message accumulation and adds padding and message length
